@@ -73,13 +73,13 @@ def makedir(path):
 
 def parse_devkit_meta(ILSVRC_DEVKIT_TAR):
     tf = open_tar(ILSVRC_DEVKIT_TAR, 'devkit tar')
-    fmeta = tf.extractfile(tf.getmember('ILSVRC2012_devkit_t12/data/meta.mat'))
+    fmeta = tf.extractfile(tf.getmember('ILSVRC2014_devkit/data/meta_clsloc.mat'))
     meta_mat = scipy.io.loadmat(StringIO(fmeta.read()))
-    labels_dic = dict((m[0][1][0], m[0][0][0][0]-1) for m in meta_mat['synsets'] if m[0][0][0][0] >= 1 and m[0][0][0][0] <= 1000)
-    label_names_dic = dict((m[0][1][0], m[0][2][0]) for m in meta_mat['synsets'] if m[0][0][0][0] >= 1 and m[0][0][0][0] <= 1000)
+    labels_dic = dict((m[1][0], m[0][0][0]-1) for m in meta_mat['synsets'][0] if m[0][0][0] >= 1 and m[0][0][0] <= 1000)
+    label_names_dic = dict((m[1][0], m[2][0]) for m in meta_mat['synsets'] if m[0][0][0] >= 1 and m[0][0][0] <= 1000)
     label_names = [tup[1] for tup in sorted([(v,label_names_dic[k]) for k,v in labels_dic.items()], key=lambda x:x[0])]
 
-    fval_ground_truth = tf.extractfile(tf.getmember('ILSVRC2012_devkit_t12/data/ILSVRC2012_validation_ground_truth.txt'))
+    fval_ground_truth = tf.extractfile(tf.getmember('ILSVRC2014_devkit/data/ILSVRC2014_clsloc_validation_ground_truth.txt'))
     validation_ground_truth = [[int(line.strip()) - 1] for line in fval_ground_truth.readlines()]
     tf.close()
     return labels_dic, label_names, validation_ground_truth
@@ -103,7 +103,7 @@ def write_batches(target_dir, name, start_batch_num, labels, jpeg_files):
 
 if __name__ == "__main__":
     parser = argp.ArgumentParser()
-    parser.add_argument('--src-dir', help='Directory containing ILSVRC2012_img_train.tar, ILSVRC2012_img_val.tar, and ILSVRC2012_devkit_t12.tar.gz', required=True)
+    parser.add_argument('--src-dir', help='Directory containing ILSVRC2012_img_train.tar, ILSVRC2012_img_val.tar, and ILSVRC2014_devkit.tar.gz', required=True)
     parser.add_argument('--tgt-dir', help='Directory to output ILSVRC 2012 batches suitable for cuda-convnet to train on.', required=True)
     args = parser.parse_args()
     
@@ -113,7 +113,7 @@ if __name__ == "__main__":
 
     ILSVRC_TRAIN_TAR = os.path.join(args.src_dir, 'ILSVRC2012_img_train.tar')
     ILSVRC_VALIDATION_TAR = os.path.join(args.src_dir, 'ILSVRC2012_img_val.tar')
-    ILSVRC_DEVKIT_TAR = os.path.join(args.src_dir, 'ILSVRC2012_devkit_t12.tar.gz')
+    ILSVRC_DEVKIT_TAR = os.path.join(args.src_dir, 'ILSVRC2014_devkit.tgz')
 
     assert OUTPUT_BATCH_SIZE % OUTPUT_SUB_BATCH_SIZE == 0
     labels_dic, label_names, validation_labels = parse_devkit_meta(ILSVRC_DEVKIT_TAR)
