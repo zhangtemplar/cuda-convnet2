@@ -76,7 +76,7 @@ def parse_devkit_meta(ILSVRC_DEVKIT_TAR):
     fmeta = tf.extractfile(tf.getmember('ILSVRC2014_devkit/data/meta_clsloc.mat'))
     meta_mat = scipy.io.loadmat(StringIO(fmeta.read()))
     labels_dic = dict((m[1][0], m[0][0][0]-1) for m in meta_mat['synsets'][0] if m[0][0][0] >= 1 and m[0][0][0] <= 1000)
-    label_names_dic = dict((m[1][0], m[2][0]) for m in meta_mat['synsets'] if m[0][0][0] >= 1 and m[0][0][0] <= 1000)
+    label_names_dic = dict((m[1][0], m[2][0]) for m in meta_mat['synsets'][0] if m[0][0][0] >= 1 and m[0][0][0] <= 1000)
     label_names = [tup[1] for tup in sorted([(v,label_names_dic[k]) for k,v in labels_dic.items()], key=lambda x:x[0])]
 
     fval_ground_truth = tf.extractfile(tf.getmember('ILSVRC2014_devkit/data/ILSVRC2014_clsloc_validation_ground_truth.txt'))
