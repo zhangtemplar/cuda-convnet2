@@ -22,7 +22,7 @@ from python_util.gpumodel import *
 import sys
 import math as m
 import layer as lay
-from convdata import ImageDataProvider, DummyConvNetLogRegDataProvider
+from convdata import ImageDataProvider, CIFARDataProvider, DummyConvNetLogRegDataProvider, CroppedImageNetDataProvider
 from os import linesep as NL
 import copy as cp
 import os
@@ -251,7 +251,7 @@ class ConvNet(IGPUModel):
     def get_options_parser(cls):
         op = IGPUModel.get_options_parser()
         op.add_option("mini", "minibatch_size", IntegerOptionParser, "Minibatch size", default=128)
-        op.add_option("layer-def", "layer_def", StringOptionParser, "Layer definition file", set_once=True)
+        op.add_option("layer-def", "layer_def", StringOptionParser, "Layer definition file", set_once=False)
         op.add_option("layer-params", "layer_params", StringOptionParser, "Layer parameter file")
         op.add_option("layer-path", "layer_path", StringOptionParser, "Layer file path prefix", default="")
         op.add_option("check-grads", "check_grads", BooleanOptionParser, "Check gradients and quit?", default=0, excuses=['data_path','save_path', 'save_file_override', 'train_batch_range','test_batch_range'])
@@ -274,7 +274,9 @@ class ConvNet(IGPUModel):
         op.options['dp_type'].default = None
 
         DataProvider.register_data_provider('dummy-lr-n', 'Dummy ConvNet logistic regression', DummyConvNetLogRegDataProvider)
-        DataProvider.register_data_provider('image', 'Image', ImageDataProvider)
+        DataProvider.register_data_provider('image', 'JPEG-encoded image data provider', ImageDataProvider)
+        DataProvider.register_data_provider('cifar', 'CIFAR-10 data provider', CIFARDataProvider)
+        DataProvider.register_data_provider('imagenet', 'ImageNet data provider', CroppedImageNetDataProvider)
   
         return op
 
