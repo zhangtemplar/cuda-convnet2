@@ -3,6 +3,11 @@ cuda-convnet2
 
 This repository is cloned from https://code.google.com/p/cuda-convnet2 for my own research.
 
+start
+=============
+If you found errors related to some libaray not found, please use the following command export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-6.5/lib64/:$root-cuda-convnet2/nvmatrix/bin/release
+
+
 files
 =============
 
