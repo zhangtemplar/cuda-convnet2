@@ -187,53 +187,53 @@ class ShowConvNet(ConvNet):
         NUM_TOP_CLASSES = min(num_classes, 5) # show this many top labels
         NUM_OUTPUTS = self.model_state['layers'][self.softmax_name]['outputs']
         PRED_IDX = 1
-        
-        label_names = [lab.split(',')[0] for lab in self.test_data_provider.batch_meta['label_names']]
-        if self.only_errors:
-            preds = n.zeros((data[0].shape[1], NUM_OUTPUTS), dtype=n.single)
-        else:
-            preds = n.zeros((NUM_IMGS, NUM_OUTPUTS), dtype=n.single)
-            #rand_idx = nr.permutation(n.r_[n.arange(1), n.where(data[1] == 552)[1], n.where(data[1] == 795)[1], n.where(data[1] == 449)[1], n.where(data[1] == 274)[1]])[:NUM_IMGS]
-            rand_idx = nr.randint(0, data[0].shape[1], NUM_IMGS)
-            if NUM_IMGS < data[0].shape[1]:
-                data = [n.require(d[:,rand_idx], requirements='C') for d in data]
-#        data += [preds]
-        # Run the model
-        print  [d.shape for d in data], preds.shape
-        self.libmodel.startFeatureWriter(data, [preds], [self.softmax_name])
-        IGPUModel.finish_batch(self)
-        print preds
-        data[0] = self.test_data_provider.get_plottable_data(data[0])
-
         if self.save_preds:
-            if not gfile.Exists(self.save_preds):
-                gfile.MakeDirs(self.save_preds)
-            preds_thresh = preds > 0.5 # Binarize predictions
-            data[0] = data[0] * 255.0
-            data[0][data[0]<0] = 0
-            data[0][data[0]>255] = 255
-            data[0] = n.require(data[0], dtype=n.uint8)
-            dir_name = '%s_predictions_batch_%d' % (os.path.basename(self.save_file), batch)
-            tar_name = os.path.join(self.save_preds, '%s.tar' % dir_name)
-            tfo = gfile.GFile(tar_name, "w")
-            tf = TarFile(fileobj=tfo, mode='w')
-            for img_idx in xrange(NUM_IMGS):
-                img = data[0][img_idx,:,:,:]
-                imsave = Image.fromarray(img)
-                prefix = "CORRECT" if data[1][0,img_idx] == preds_thresh[img_idx,PRED_IDX] else "FALSE_POS" if preds_thresh[img_idx,PRED_IDX] == 1 else "FALSE_NEG"
-                file_name = "%s_%.2f_%d_%05d_%d.png" % (prefix, preds[img_idx,PRED_IDX], batch, img_idx, data[1][0,img_idx])
-#                gf = gfile.GFile(file_name, "w")
-                file_string = StringIO()
-                imsave.save(file_string, "PNG")
-                tarinf = TarInfo(os.path.join(dir_name, file_name))
-                tarinf.size = file_string.tell()
-                file_string.seek(0)
-                tf.addfile(tarinf, file_string)
-            tf.close()
-            tfo.close()
-#                gf.close()
-            print "Wrote %d prediction PNGs to %s" % (preds.shape[0], tar_name)
+            # print preds
+            if not os.path.exists(self.save_preds):   
+                os.makedirs(self.save_preds)
+            # we process all the batches
+            while True:
+                # some constant
+                NUM_IMGS = data[0].shape[1]
+                NUM_TOP_CLASSES = min(num_classes, 5) # show this many top labels
+                NUM_OUTPUTS = self.model_state['layers'][self.softmax_name]['outputs']
+                PRED_IDX = 1
+                preds = n.zeros((NUM_IMGS, NUM_OUTPUTS), dtype=n.single)
+                # we only save the prediction result instead of the image
+                dir_name = 'predictions_batch_%d' % (batch)
+                tar_name = os.path.join(self.save_preds, dir_name)
+                # Run the model
+                print  [d.shape for d in data], preds.shape
+                self.libmodel.startFeatureWriter(data, [preds], [self.softmax_name])
+                # in the mean while, prepare to load the next batch of data
+                new_epoch, batch, new_data = self.get_next_batch(train=False)
+                IGPUModel.finish_batch(self)
+                # swap the data
+                # concatenate the pred into the groud true label
+                preds=n.concatenate((n.transpose(data[1]), preds), axis=1);
+                tfo = open(tar_name, "wb");
+                cPickle.dump(preds, tfo)
+                tfo.close()
+                print "Wrote %d prediction PNGs to %s" % (preds.shape[0], tar_name)
+                if new_epoch!=epoch:
+                    print "All batches process"
+                    break;
+                data=new_data
         else:
+            label_names = [lab.split(',')[0] for lab in self.test_data_provider.batch_meta['label_names']]
+            if self.only_errors:
+                preds = n.zeros((data[0].shape[1], NUM_OUTPUTS), dtype=n.single)
+            else:
+                preds = n.zeros((NUM_IMGS, NUM_OUTPUTS), dtype=n.single)
+                rand_idx = nr.randint(0, data[0].shape[1], NUM_IMGS)
+                if NUM_IMGS < data[0].shape[1]:
+                    data = [n.require(d[:,rand_idx], requirements='C') for d in data]
+            # Run the model
+            print  [d.shape for d in data], preds.shape
+            self.libmodel.startFeatureWriter(data, [preds], [self.softmax_name])
+            IGPUModel.finish_batch(self)
+            # print preds
+            data[0] = self.test_data_provider.get_plottable_data(data[0])
             fig = pl.figure(3, figsize=(12,9))
             fig.text(.4, .95, '%s test samples' % ('Mistaken' if self.only_errors else 'Random'))
             if self.only_errors:
